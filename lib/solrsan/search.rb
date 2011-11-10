@@ -19,13 +19,10 @@ module Solrsan
       def search(search_params={})
         @rsolr ||= Solrsan::Config.instance.rsolr_object
 
-        start = search_params[:start] || 0
-        rows = search_params[:rows] || 20
-
         solr_params = parse_params_for_solr(search_params)
 
         begin
-          solr_response = @rsolr.paginate(start, rows, 'select', :params => solr_params)
+          solr_response = @rsolr.get('select', :params => solr_params)
           parse_solr_response(solr_response)
         rescue RSolr::Error::Http => e
           {:docs => [], 
@@ -143,10 +140,6 @@ module Solrsan
         return search_response unless search_response[:highlighting]
 
         excluded_highlighting_fields = ['id', 'db_id', 'type']
-        #save original pagniate keys
-        per_page = search_response[:docs].per_page
-        start = search_response[:docs].start
-        total = search_response[:docs].total
 
         highlighted_docs = search_response[:docs].map do |doc|
           hl_metadata = search_response[:highlighting][doc['id']]
@@ -165,11 +158,6 @@ module Solrsan
         end
 
         search_response[:docs] = highlighted_docs
-
-        search_response[:docs].extend RSolr::Pagination::PaginatedDocSet
-        search_response[:docs].per_page = per_page
-        search_response[:docs].start = start
-        search_response[:docs].total = total
 
         search_response
       end
